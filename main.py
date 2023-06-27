@@ -12,6 +12,7 @@
 # sort = 'priceDesc'
 # withImagesOnly = 'true'     # Только с фото
 # limit_page = 1     # Количество объявлений на странице 50 максимум
+# cookies = dict(cookies_are='working')
 #
 # def except_error(res): # Эту функцию можно дополнить, например обработку капчи
 #     print(res.status_code, res.text)
@@ -33,7 +34,7 @@
 # if cookie:                                      # Добавим куки, если есть внешние куки
 #     headers['cookie'] = cookie
 # s.headers.update(headers)                       # Сохраняем заголовки в сессию
-# s.get('https://m.avito.ru/')                    # Делаем запрос на мобильную версию.
+# s.get('https://m.avito.ru/', cookies=cookies)                    # Делаем запрос на мобильную версию.
 # url_api_9 = 'https://m.avito.ru/api/9/items'    # Урл первого API, позволяет получить id и url объявлений по заданным фильтрам
 #                                                 # Тут уже видно цену и название объявлений
 # params = {
@@ -106,34 +107,79 @@
 
 
 
-import cloudscraper
+
+
+import cloudscraper, json, sys
+
+def except_error(res): # Эту функцию можно дополнить, например обработку капчи
+    print(res.status_code, res.text)
+    sys.exit(1)
+
+
+
+
+
 s = cloudscraper.create_scraper(delay=10, browser={'custom': 'ScraperBot/1.0'})
 
 url = 'https://www.avito.ru/web/1/main/items'
 
-# params = {
-#     'categoryId': 14,
-#     'params[30]': 4969,
-#     'locationId': locationId,
-#     'searchRadius': searchRadius,
-#     'priceMin': priceMin,
-#     'priceMax': priceMax,
-#     'params[110275]': 426645,
-#     'sort': sort,
-#     'withImagesOnly': withImagesOnly,
-#     'lastStamp': 1610905380,
-#     'display': 'list',
-#     'limit': limit_page,
-#     'query': search,
-# }
+search = 'suzuki+gsx-r'     # Строка поиска на сайте и ниже параметры выбора города, радиуса разброса цены и т.п.
+categoryId = 14
+locationId = 641780         # Новосибирск
+searchRadius = 200
+priceMin = 200000
+priceMax = 450000
+sort = 'priceDesc'
+withImagesOnly = 'true'     # Только с фото
+limit_page = 1
 
 params = {
-    'forceLocation': False,
-    'locationId': 653040,
-    'lastStamp': 1683748131,
-    'limit': 30,
-    'offset': 89,
-    'categoryId': 4
+    'categoryId': 14,
+    'params[30]': 4969,
+    'locationId': locationId,
+    'searchRadius': searchRadius,
+    'priceMin': priceMin,
+    'priceMax': priceMax,
+    'params[110275]': 426645,
+    'sort': sort,
+    'withImagesOnly': withImagesOnly,
+    'lastStamp': 1610905380,
+    'display': 'list',
+    'limit': limit_page,
+    'query': search,
 }
-r = s.get(url, params=params)
-print(r)
+
+# params = {
+#     'forceLocation': False,
+#     'locationId': 653040,
+#     'lastStamp': 1683748131,
+#     'limit': 30,
+#     'offset': 89,
+#     'categoryId': 4
+# }
+cicle_stop = 1
+cikle = 0
+while cicle_stop:
+    cikle += 1          # Так как страницы начинаются с 1, то сразу же итерируем
+    params['page'] = cikle
+    res = s.get(url, params=params)
+    try:
+        res = res.json()
+    except json.decoder.JSONDecodeError:
+        except_error(res)
+    if res['status'] != 'ok':
+            print(res['result'])
+            sys.exit(1)
+    if res['status'] == 'ok':
+        items_page = int(len(res['result']['items']))
+
+        if items_page > limit_page: # проверка на "snippet"
+            items_page = items_page - 1
+
+        for item in res['result']['items']:
+            if item['type'] == 'item':
+                items.append(item)
+        if items_page < limit_page:
+            cicle_stop = False
+
+print(res)
