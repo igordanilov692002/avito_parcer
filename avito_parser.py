@@ -1,6 +1,7 @@
 from urllib.parse import quote
 from datetime import datetime
 import locale
+import fake_useragent
 import requests
 from bs4 import BeautifulSoup
 
@@ -13,7 +14,7 @@ class TooManyRequests(Exception):
     pass
 
 
-def get_all_ads(query, sort_by=None, by_title=False, with_images=False, owner=None):
+def get_all_ads(query='audi tt', sort_by=None, by_title=False, with_images=False, owner=None):
     '''Yields dicts with ad info (title, link, price and date).
 
     Keyword arguments:
@@ -142,12 +143,18 @@ def get_ads_from_page(page):
     return get_beautiful_soup(page).find_all('div', attrs={'class': 'item_table-wrapper'})
 
 
-def fetch_page(page_url):
+def fetch_page(page_url, params=None):
     '''Returns page html as string
 
     raises TooManyRequest if request redirected to https://www.avito.ru/blocked
     '''
-    responce = requests.get(page_url)
+    headers = {
+        "Accept": "*/*",
+        "User-Agent": fake_useragent.UserAgent().random
+    }
+    responce = requests.get(page_url, headers=headers, params=params)
+    if responce.url == 'https://www.avito.ru/blocked':
+        raise TooManyRequests('IP temporarily blocked')
     if responce.url == 'https://www.avito.ru/blocked':
         raise TooManyRequests('IP temporarily blocked')
     return requests.get(page_url).text
@@ -159,3 +166,5 @@ def get_beautiful_soup(html):
 
 def is_page_exists(page):
     return get_beautiful_soup(page).find('div', attrs={'class': 'nulus'}) is None
+
+# 'https://www.avito.ru/moskva?s=101&bt=0&q=iphone%2013&i=0&user=0&p={}'

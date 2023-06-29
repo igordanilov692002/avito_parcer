@@ -23,7 +23,7 @@ def print_ad_info(ad, number):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('query', type=str, help='Поисковый запрос')
+    parser.add_argument('-query', type=str, help='Поисковый запрос', default="iphone 13")
     parser.add_argument('-u', '--output', type=str, default='output.csv',
                         help='Название cvs файла для вывода (например output.csv)')
     parser.add_argument('-s', '--sortby', type=str, choices=['date', 'price', 'price_desc'],
@@ -58,6 +58,7 @@ if __name__ == '__main__':
     num_of_printed_ads = 5
     fieldnames = ['Title', 'Link', 'Price', 'Date']
     ad_num = 0
+    count = 0
     with open(args.output, "w", newline='') as out_file:
         print(os.path.abspath(args.output))
         writer = DictWriter(out_file, delimiter=',', fieldnames=fieldnames)
@@ -76,6 +77,8 @@ if __name__ == '__main__':
             if args.statistics and ad_num <= num_of_printed_ads:
                 print_ad_info(ad, ad_num)
             writer.writerow(ad)
+            count += 1
+            print(count)
     if ad_num == 0:
         print('Ни одно объявление не найдено')
     elif args.statistics:
